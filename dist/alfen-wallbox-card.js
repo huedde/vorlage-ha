@@ -4,28 +4,57 @@ class AlfenWallboxCard extends HTMLElement {
       throw new Error("Konfiguration für alfen-wallbox-card fehlt.");
     }
 
-    // Mindestens eine Entity sollte angegeben sein
+    // Mindestens eine Socket-Konfiguration oder Single-Entities
+    const hasSocketsArray =
+      Array.isArray(config.sockets) && config.sockets.length > 0;
+
     if (
+      !hasSocketsArray &&
       !config.status_entity &&
       !config.power_entity &&
       !config.energy_entity &&
       !config.charging_entity
     ) {
       throw new Error(
-        "Bitte mindestens eine Entity (z.B. power_entity oder charging_entity) angeben."
+        "Bitte mindestens eine Socket-Konfiguration oder eine Entity (z.B. power_entity oder charging_entity) angeben."
       );
+    }
+
+    // In internes, vereinheitlichtes Sockets-Array überführen
+    let sockets;
+
+    if (hasSocketsArray) {
+      sockets = config.sockets.map((socket, index) => ({
+        name: socket.name || `Socket ${index + 1}`,
+        status_entity: socket.status_entity,
+        power_entity: socket.power_entity,
+        energy_entity: socket.energy_entity,
+        current_entity: socket.current_entity,
+        plugged_entity: socket.plugged_entity,
+        charging_entity: socket.charging_entity,
+        lock_entity: socket.lock_entity,
+        switch_entity: socket.switch_entity,
+      }));
+    } else {
+      // Rückwärtskompatibilität: Single-Socket-Konfiguration aus Top-Level-Entitäten
+      sockets = [
+        {
+          name: config.socket_name || "Socket 1",
+          status_entity: config.status_entity,
+          power_entity: config.power_entity,
+          energy_entity: config.energy_entity,
+          current_entity: config.current_entity,
+          plugged_entity: config.plugged_entity,
+          charging_entity: config.charging_entity,
+          lock_entity: config.lock_entity,
+          switch_entity: config.switch_entity,
+        },
+      ];
     }
 
     this._config = {
       title: config.title || "Wallbox",
-      status_entity: config.status_entity,
-      power_entity: config.power_entity,
-      energy_entity: config.energy_entity,
-      current_entity: config.current_entity,
-      plugged_entity: config.plugged_entity,
-      charging_entity: config.charging_entity,
-      lock_entity: config.lock_entity,
-      switch_entity: config.switch_entity,
+      sockets,
       // optionale Farben / Einstellungen
       charging_color: config.charging_color || "var(--primary-color)",
       idle_color: config.idle_color || "var(--secondary-text-color)",
@@ -61,11 +90,11 @@ class AlfenWallboxCard extends HTMLElement {
     });
   }
 
-  _deriveStatus() {
+  _deriveStatus(socketCfg) {
     const cfg = this._config;
-    const statusObj = this._entityState(cfg.status_entity);
-    const chargingObj = this._entityState(cfg.charging_entity);
-    const pluggedObj = this._entityState(cfg.plugged_entity);
+    const statusObj = this._entityState(socketCfg.status_entity);
+    const chargingObj = this._entityState(socketCfg.charging_entity);
+    const pluggedObj = this._entityState(socketCfg.plugged_entity);
 
     // Wenn es ein dediziertes Status-Entity gibt, verwenden wir das
     if (statusObj) {
@@ -108,26 +137,120 @@ class AlfenWallboxCard extends HTMLElement {
     const root = this.shadowRoot;
     const cfg = this._config;
 
-    const statusInfo = this._deriveStatus();
-    const powerObj = this._entityState(cfg.power_entity);
-    const energyObj = this._entityState(cfg.energy_entity);
-    const currentObj = this._entityState(cfg.current_entity);
-    const lockObj = this._entityState(cfg.lock_entity);
-    const switchObj = this._entityState(cfg.switch_entity);
-    const pluggedObj = this._entityState(cfg.plugged_entity);
+    const sockets = cfg.sockets || [];
+    const globalStatusInfo =
+      sockets.length > 0 ? this._deriveStatus(sockets[0]) : null;
 
-    const power = this._formatNumber(powerObj, 1, "0");
-    const energy = this._formatNumber(energyObj, 2, "-");
-    const current = this._formatNumber(currentObj, 0, "-");
+    const socketsHtml = sockets
+      .map((socketCfg, index) => {
+        const statusInfo = this._deriveStatus(socketCfg);
+        const powerObj = this._entityState(socketCfg.power_entity);
+        const energyObj = this._entityState(socketCfg.energy_entity);
+        const currentObj = this._entityState(socketCfg.current_entity);
+        const lockObj = this._entityState(socketCfg.lock_entity);
+        const switchObj = this._entityState(socketCfg.switch_entity);
+        const pluggedObj = this._entityState(socketCfg.plugged_entity);
 
-    const isCharging = statusInfo.key === "charging";
-    const isLocked = lockObj?.state === "locked";
-    const isEnabled = switchObj?.state !== "off";
-    const isPlugged = pluggedObj?.state === "on";
+        const power = this._formatNumber(powerObj, 1, "0");
+        const energy = this._formatNumber(energyObj, 2, "-");
+        const current = this._formatNumber(currentObj, 0, "-");
 
-    const lockLabel = isLocked ? "Gesperrt" : "Entriegelt";
-    const enableLabel = isEnabled ? "Laden erlaubt" : "Laden gesperrt";
-    const pluggedLabel = isPlugged ? "Angesteckt" : "Nicht angesteckt";
+        const isCharging = statusInfo.key === "charging";
+        const isLocked = lockObj?.state === "locked";
+        const isEnabled = switchObj?.state !== "off";
+        const isPlugged = pluggedObj?.state === "on";
+
+        const lockLabel = isLocked ? "Gesperrt" : "Entriegelt";
+        const enableLabel = isEnabled ? "Laden erlaubt" : "Laden gesperrt";
+        const pluggedLabel = isPlugged ? "Angesteckt" : "Nicht angesteckt";
+
+        return `
+          <div class="socket">
+            <div class="socket-header">
+              <div class="socket-title">${socketCfg.name || `Socket ${
+          index + 1
+        }`}</div>
+              <div class="status-chip" style="background-color: ${
+                statusInfo.color
+              }">
+                <div class="status-dot"></div>
+                <span>${statusInfo.label}</span>
+              </div>
+            </div>
+
+            <div class="socket-content">
+              <div class="power-circle ${
+                isCharging ? "power-circle--charging" : ""
+              }">
+                <div class="power-value">${power}</div>
+                <div class="power-unit">kW</div>
+              </div>
+
+              <div>
+                <div class="details">
+                  <div class="details-row">
+                    <div class="details-label">Energie (Session)</div>
+                    <div class="details-value">${energy} kWh</div>
+                  </div>
+                  <div class="details-row">
+                    <div class="details-label">Stromstärke</div>
+                    <div class="details-value">${current} A</div>
+                  </div>
+                  <div class="details-row">
+                    <div class="details-label">Lock</div>
+                    <div class="details-value">${lockLabel}</div>
+                  </div>
+                  <div class="details-row">
+                    <div class="details-label">Freigabe</div>
+                    <div class="details-value">${enableLabel}</div>
+                  </div>
+                </div>
+
+                <div class="chips-row">
+                  <div class="chip">
+                    <div class="chip-dot ${
+                      isPlugged ? "chip-dot--on" : "chip-dot--off"
+                    }"></div>
+                    <span>${pluggedLabel}</span>
+                  </div>
+                  ${
+                    socketCfg.charging_entity
+                      ? `<div class="chip">
+                          <div class="chip-dot ${
+                            isCharging ? "chip-dot--on" : "chip-dot--off"
+                          }"></div>
+                          <span>${
+                            isCharging
+                              ? "Ladevorgang aktiv"
+                              : "Nicht am Laden"
+                          }</span>
+                        </div>`
+                      : ""
+                  }
+                </div>
+
+                <div class="actions">
+                  ${
+                    socketCfg.switch_entity
+                      ? `<button class="action primary" data-action="toggle-charging" data-socket-index="${index}">
+                          ${isEnabled ? "Laden stoppen" : "Laden starten"}
+                        </button>`
+                      : ""
+                  }
+                  ${
+                    socketCfg.lock_entity
+                      ? `<button class="action secondary" data-action="toggle-lock" data-socket-index="${index}">
+                          ${isLocked ? "Entriegeln" : "Verriegeln"}
+                        </button>`
+                      : ""
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
 
     root.innerHTML = `
       <ha-card>
@@ -303,76 +426,18 @@ class AlfenWallboxCard extends HTMLElement {
 
         <div class="header">
           <div class="title">${cfg.title}</div>
-          <div class="status-chip">
-            <div class="status-dot"></div>
-            <span>${statusInfo.label}</span>
-          </div>
-        </div>
-
-        <div class="content">
-          <div class="power-circle">
-            <div class="power-value">${power}</div>
-            <div class="power-unit">kW</div>
-          </div>
-
-          <div>
-            <div class="details">
-              <div class="details-row">
-                <div class="details-label">Energie (Session)</div>
-                <div class="details-value">${energy} kWh</div>
-              </div>
-              <div class="details-row">
-                <div class="details-label">Stromstärke</div>
-                <div class="details-value">${current} A</div>
-              </div>
-              <div class="details-row">
-                <div class="details-label">Lock</div>
-                <div class="details-value">${lockLabel}</div>
-              </div>
-              <div class="details-row">
-                <div class="details-label">Freigabe</div>
-                <div class="details-value">${enableLabel}</div>
-              </div>
-            </div>
-
-            <div class="chips-row">
-              <div class="chip">
-                <div class="chip-dot ${
-                  isPlugged ? "chip-dot--on" : "chip-dot--off"
-                }"></div>
-                <span>${pluggedLabel}</span>
-              </div>
-              ${
-                cfg.charging_entity
-                  ? `<div class="chip">
-                      <div class="chip-dot ${
-                        isCharging ? "chip-dot--on" : "chip-dot--off"
-                      }"></div>
-                      <span>${
-                        isCharging ? "Ladevorgang aktiv" : "Nicht am Laden"
-                      }</span>
-                    </div>`
-                  : ""
-              }
-            </div>
-          </div>
-        </div>
-
-        <div class="actions">
           ${
-            cfg.switch_entity
-              ? `<button class="action primary" data-action="toggle-charging">
-                    ${isEnabled ? "Laden stoppen" : "Laden starten"}
-                 </button>`
+            globalStatusInfo
+              ? `<div class="status-chip">
+                  <div class="status-dot"></div>
+                  <span>${globalStatusInfo.label}</span>
+                </div>`
               : ""
           }
-          ${
-            cfg.lock_entity
-              ? `<button class="action secondary" data-action="toggle-lock">
-                    ${isLocked ? "Entriegeln" : "Verriegeln"}
-                 </button>`
-              : ""
-          }
+        </div>
+
+        <div class="sockets-grid">
+          ${socketsHtml}
         </div>
       </ha-card>
     `;
@@ -384,26 +449,31 @@ class AlfenWallboxCard extends HTMLElement {
     const root = this.shadowRoot;
     if (!root) return;
 
-    const toggleChargingBtn = root.querySelector(
+    const toggleChargingBtns = root.querySelectorAll(
       'button[data-action="toggle-charging"]'
     );
-    const toggleLockBtn = root.querySelector(
+    const toggleLockBtns = root.querySelectorAll(
       'button[data-action="toggle-lock"]'
     );
 
-    if (toggleChargingBtn) {
-      toggleChargingBtn.addEventListener("click", () =>
-        this._toggleCharging()
-      );
-    }
+    toggleChargingBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const index = parseInt(btn.getAttribute("data-socket-index") || "0", 10);
+        this._toggleCharging(index);
+      });
+    });
 
-    if (toggleLockBtn) {
-      toggleLockBtn.addEventListener("click", () => this._toggleLock());
-    }
+    toggleLockBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const index = parseInt(btn.getAttribute("data-socket-index") || "0", 10);
+        this._toggleLock(index);
+      });
+    });
   }
 
-  _toggleCharging() {
-    const entityId = this._config.switch_entity;
+  _toggleCharging(socketIndex = 0) {
+    const socketCfg = this._config.sockets?.[socketIndex];
+    const entityId = socketCfg?.switch_entity;
     if (!entityId || !this._hass) return;
 
     const stateObj = this._entityState(entityId);
@@ -414,8 +484,9 @@ class AlfenWallboxCard extends HTMLElement {
     this._hass.callService(domain, service, { entity_id: entityId });
   }
 
-  _toggleLock() {
-    const entityId = this._config.lock_entity;
+  _toggleLock(socketIndex = 0) {
+    const socketCfg = this._config.sockets?.[socketIndex];
+    const entityId = socketCfg?.lock_entity;
     if (!entityId || !this._hass) return;
 
     const stateObj = this._entityState(entityId);
@@ -427,11 +498,23 @@ class AlfenWallboxCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      title: "Alfen Wallbox",
-      power_entity: "sensor.alfen_power",
-      energy_entity: "sensor.alfen_session_energy",
-      charging_entity: "binary_sensor.alfen_charging",
-      plugged_entity: "binary_sensor.alfen_cable_plugged",
+      title: "Alfen Wallbox Pro Duo",
+      sockets: [
+        {
+          name: "Socket 1",
+          power_entity: "sensor.alfen_ladestation_1_s1_apparent_power_sum",
+          energy_entity: "sensor.alfen_ladestation_1_s1_current_session_wh",
+          charging_entity: "sensor.alfen_ladestation_1_s1_car_charging",
+          plugged_entity: "sensor.alfen_ladestation_1_s1_car_connected",
+        },
+        {
+          name: "Socket 2",
+          power_entity: "sensor.alfen_ladestation_1_s2_apparent_power_sum",
+          energy_entity: "sensor.alfen_ladestation_1_s2_current_session_wh",
+          charging_entity: "sensor.alfen_ladestation_1_s2_car_charging",
+          plugged_entity: "sensor.alfen_ladestation_1_s2_car_connected",
+        },
+      ],
     };
   }
 }
