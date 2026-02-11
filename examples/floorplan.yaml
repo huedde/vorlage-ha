@@ -1,0 +1,18 @@
+# Beispiel-Konfiguration für die Raumplan-Karte
+# Kopiere diese Rules in deine Karte und passe die Entity-IDs an!
+type: custom:room-plan-card
+image: /local/floorplan.svg
+stylesheet: /local/floorplan.css
+rules:
+  - entity: light.wohnzimmer
+    element: area.wohnzimmer
+    tap_action: toggle
+  - entity: light.kueche
+    element: area.kueche
+    tap_action: toggle
+  - entity: light.bad
+    element: area.bad
+    tap_action: toggle
+  - entity: light.schlafzimmer
+    element: area.schlafzimmer
+    tap_action: toggle

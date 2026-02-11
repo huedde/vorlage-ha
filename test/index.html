@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raumplan Karte – Lokaler Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Home Assistant Default Dark Theme */
+      --ha-card-background: rgba(30, 30, 30, 0.95);
+      --card-background-color: rgba(30, 30, 30, 0.95);
+      --primary-color: #03a9f4;
+      --primary-text-color: #e1e1e1;
+      --secondary-text-color: #9e9e9e;
+      --divider-color: rgba(255, 255, 255, 0.12);
+      --state-icon-on-color: #ffc107;
+      --state-icon-active-color: #ffc107;
+      --rgb-primary-color: 3, 169, 244;
+      --mdc-icon-size: 24px;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Roboto, sans-serif; margin: 0; padding: 24px; background: #121212; color: var(--primary-text-color); min-height: 100vh; }
+    h1 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
+    .test-section { margin-bottom: 32px; }
+    .test-section h2 { font-size: 14px; margin-bottom: 12px; color: var(--secondary-text-color); font-weight: 500; }
+    .card-wrap { max-width: 600px; }
+    .controls { margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .controls button { padding: 10px 16px; border: none; border-radius: 8px; background: var(--primary-color); color: white; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .controls button:hover { background: #0288d1; }
+    .controls button.secondary { background: rgba(255,255,255,0.12); color: var(--primary-text-color); }
+    .controls button.secondary:hover { background: rgba(255,255,255,0.18); }
+    label { font-size: 13px; color: var(--secondary-text-color); margin-right: 8px; }
+    input[type="text"], select { padding: 8px 12px; border: 1px solid var(--divider-color); border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--primary-text-color); }
+    input[type="text"] { min-width: 200px; }
+    select { min-width: 80px; }
+  </style>
+</head>
+<body>
+  <h1>Interaktiver Raumplan – Lokaler Test</h1>
+
+  <div class="test-section">
+    <h2>Karte (Anzeige)</h2>
+    <div class="controls">
+      <label>Bild-URL:</label>
+      <input type="text" id="img-url" value="test/Dieselstrasse2.svg" placeholder="/local/raumplan.png">
+      <label>Drehung:</label>
+      <select id="img-rotation">
+        <option value="0">0°</option>
+        <option value="90">90°</option>
+        <option value="180">180°</option>
+        <option value="270">270°</option>
+      </select>
+      <button id="btn-apply">Anwenden</button>
+      <button id="btn-toggle" class="secondary">Licht simulieren (an/aus)</button>
+    </div>
+    <div class="card-wrap">
+      <div id="card-container"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Konfigurations-Editor</h2>
+    <div class="card-wrap">
+      <div id="editor-container"></div>
+    </div>
+  </div>
+
+  <!-- Mock HA Komponenten -->
+  <script src="mock-ha.js"></script>
+
+  <!-- Raumplan Karte -->
+  <script src="../dist/homeassistant-raumplan.js"></script>
+
+  <script>
+    const mockHass = {
+      states: {
+        'light.wohnzimmer': { state: 'on', attributes: { friendly_name: 'Wohnzimmer', icon: 'mdi:sofa' } },
+        'light.kueche': { state: 'off', attributes: { friendly_name: 'Küche', icon: 'mdi:lightbulb' } },
+        'sensor.temperatur_bad': { state: '22.5', attributes: { friendly_name: 'Bad Temperatur', unit_of_measurement: '°C' } },
+        'light.bad': { state: 'off', attributes: { friendly_name: 'Bad' } },
+        'light.schlafzimmer': { state: 'on', attributes: { friendly_name: 'Schlafzimmer' } }
+      }
+    };
+
+    const defaultConfig = {
+      image: 'test/Dieselstrasse2.svg',
+      title: 'EG',
+      rotation: 0,
+      entities: [
+        { entity: 'light.wohnzimmer', x: 25, y: 30, scale: 1, color: '#ffc107' },
+        { entity: 'light.kueche', x: 75, y: 30, scale: 1.2 },
+        { entity: 'sensor.temperatur_bad', x: 50, y: 70, scale: 0.8 }
+      ],
+      walls: []
+    };
+
+    // Karte
+    const cardContainer = document.getElementById('card-container');
+    let cardEl = null;
+
+    function renderCard(config) {
+      if (!cardEl) {
+        cardEl = document.createElement('room-plan-card');
+        cardContainer.appendChild(cardEl);
+      }
+      cardEl.setConfig(config);
+      cardEl.hass = mockHass;
+    }
+
+    document.getElementById('btn-apply').addEventListener('click', () => {
+      const url = document.getElementById('img-url').value.trim();
+      const rotation = Number(document.getElementById('img-rotation').value) || 0;
+      renderCard({ ...defaultConfig, image: url || defaultConfig.image, rotation });
+    });
+
+    document.getElementById('btn-toggle').addEventListener('click', () => {
+      const s = mockHass.states['light.wohnzimmer'];
+      s.state = s.state === 'on' ? 'off' : 'on';
+      if (cardEl) cardEl.hass = mockHass;
+    });
+
+    // Editor
+    const editorContainer = document.getElementById('editor-container');
+    let editorEl = null;
+
+    function renderEditor() {
+      if (!editorEl) {
+        editorEl = document.createElement('room-plan-editor');
+        editorContainer.appendChild(editorEl);
+      }
+      editorEl.setConfig(defaultConfig);
+      editorEl.hass = mockHass;
+      editorEl.addEventListener('config-changed', (e) => {
+        console.log('Config geändert:', e.detail.config);
+        const c = e.detail.config;
+        defaultConfig.image = c.image || defaultConfig.image;
+        defaultConfig.rotation = c.rotation ?? defaultConfig.rotation;
+        defaultConfig.entities = c.entities || defaultConfig.entities;
+        defaultConfig.walls = c.walls || defaultConfig.walls || [];
+        renderCard(c);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        renderCard(defaultConfig);
+        renderEditor();
+      }, 100);
+    });
+  </script>
+</body>
+</html>

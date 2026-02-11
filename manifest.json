@@ -1,0 +1,7 @@
+{
+  "name": "Interaktiver Raumplan",
+  "version": "1.0.0",
+  "description": "Lovelace-Karte für einen interaktiven Raumplan mit Bild-Hintergrund und per Drag & Drop positionierbaren Entitäten.",
+  "type": "module",
+  "author": "Home Assistant User"
+}
