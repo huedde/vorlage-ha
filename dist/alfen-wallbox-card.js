@@ -4,26 +4,10 @@ class AlfenWallboxCard extends HTMLElement {
       throw new Error("Konfiguration für alfen-wallbox-card fehlt.");
     }
 
-    // Mindestens eine Socket-Konfiguration oder Single-Entities
-    const hasSocketsArray =
-      Array.isArray(config.sockets) && config.sockets.length > 0;
-
-    if (
-      !hasSocketsArray &&
-      !config.status_entity &&
-      !config.power_entity &&
-      !config.energy_entity &&
-      !config.charging_entity
-    ) {
-      throw new Error(
-        "Bitte mindestens eine Socket-Konfiguration oder eine Entity (z.B. power_entity oder charging_entity) angeben."
-      );
-    }
-
     // In internes, vereinheitlichtes Sockets-Array überführen
-    let sockets;
+    let sockets = [];
 
-    if (hasSocketsArray) {
+    if (Array.isArray(config.sockets)) {
       sockets = config.sockets.map((socket, index) => ({
         name: socket.name || `Socket ${index + 1}`,
         status_entity: socket.status_entity,
@@ -35,6 +19,22 @@ class AlfenWallboxCard extends HTMLElement {
         lock_entity: socket.lock_entity,
         switch_entity: socket.switch_entity,
       }));
+    } else if (config.sockets) {
+      // Falls nur ein Objekt statt Array angegeben wurde
+      const socket = config.sockets;
+      sockets = [
+        {
+          name: socket.name || "Socket 1",
+          status_entity: socket.status_entity,
+          power_entity: socket.power_entity,
+          energy_entity: socket.energy_entity,
+          current_entity: socket.current_entity,
+          plugged_entity: socket.plugged_entity,
+          charging_entity: socket.charging_entity,
+          lock_entity: socket.lock_entity,
+          switch_entity: socket.switch_entity,
+        },
+      ];
     } else {
       // Rückwärtskompatibilität: Single-Socket-Konfiguration aus Top-Level-Entitäten
       sockets = [
@@ -90,6 +90,21 @@ class AlfenWallboxCard extends HTMLElement {
     });
   }
 
+  _asBool(stateObj) {
+    if (!stateObj) return undefined;
+    const raw = stateObj.state;
+    if (raw === null || raw === undefined) return undefined;
+
+    const str = String(raw).trim().toLowerCase();
+    if (["on", "true", "yes", "1", "open"].includes(str)) return true;
+    if (["off", "false", "no", "0", "closed"].includes(str)) return false;
+
+    const num = Number(raw);
+    if (!Number.isNaN(num)) return num !== 0;
+
+    return undefined;
+  }
+
   _deriveStatus(socketCfg) {
     const cfg = this._config;
     const statusObj = this._entityState(socketCfg.status_entity);
@@ -117,14 +132,14 @@ class AlfenWallboxCard extends HTMLElement {
       };
     }
 
-    // Kein dediziertes Status-Entity: aus Binary-Sensoren ableiten
-    const isCharging = chargingObj?.state === "on";
-    const isPlugged = pluggedObj?.state === "on";
+    // Kein dediziertes Status-Entity: aus Binary-Sensoren / numerischen Sensoren ableiten
+    const isCharging = this._asBool(chargingObj);
+    const isPlugged = this._asBool(pluggedObj);
 
-    if (isCharging) {
+    if (isCharging === true) {
       return { key: "charging", label: "Lädt", color: cfg.charging_color };
     }
-    if (isPlugged) {
+    if (isPlugged === true) {
       return { key: "ready", label: "Angesteckt", color: cfg.idle_color };
     }
 
@@ -157,8 +172,10 @@ class AlfenWallboxCard extends HTMLElement {
 
         const isCharging = statusInfo.key === "charging";
         const isLocked = lockObj?.state === "locked";
-        const isEnabled = switchObj?.state !== "off";
-        const isPlugged = pluggedObj?.state === "on";
+        const isEnabled = switchObj
+          ? this._asBool(switchObj) ?? switchObj.state !== "off"
+          : false;
+        const isPlugged = this._asBool(pluggedObj) === true;
 
         const lockLabel = isLocked ? "Gesperrt" : "Entriegelt";
         const enableLabel = isEnabled ? "Laden erlaubt" : "Laden gesperrt";
@@ -298,10 +315,34 @@ class AlfenWallboxCard extends HTMLElement {
             background: var(--primary-background-color);
           }
 
-          .content {
+          .sockets-grid {
             display: grid;
-            grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
+          }
+
+          .socket {
+            padding: 12px;
+            border-radius: 12px;
+            background: var(--ha-card-background, rgba(255,255,255,0.02));
+            border: 1px solid var(--divider-color);
+          }
+
+          .socket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+
+          .socket-title {
+            font-weight: 500;
+          }
+
+          .socket-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr);
+            gap: 12px;
             align-items: center;
           }
 
@@ -309,14 +350,16 @@ class AlfenWallboxCard extends HTMLElement {
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            border: 6px solid ${
-              isCharging ? cfg.charging_color : "var(--divider-color)"
-            };
+            border: 6px solid var(--divider-color);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             margin: 0 auto;
+          }
+
+          .power-circle--charging {
+            border-color: ${cfg.charging_color};
           }
 
           .power-value {
@@ -414,12 +457,8 @@ class AlfenWallboxCard extends HTMLElement {
           }
 
           @media (max-width: 500px) {
-            .content {
+            .socket-content {
               grid-template-columns: minmax(0, 1fr);
-            }
-            .power-circle {
-              width: 80px;
-              height: 80px;
             }
           }
         </style>
