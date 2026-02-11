@@ -305,7 +305,7 @@ class AlfenWallboxCard extends HTMLElement {
             font-size: 0.8rem;
             font-weight: 500;
             color: var(--primary-background-color);
-            background-color: ${statusInfo.color};
+            background-color: var(--primary-color);
           }
 
           .status-dot {
