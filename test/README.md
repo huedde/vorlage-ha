@@ -1,6 +1,6 @@
 # Lokale Test-UI
 
-Frontend der Raumplan-Karte ohne Home Assistant testen.
+Frontend der **Alfen Wallbox Karte** ohne Home Assistant testen.
 
 ## Starten
 
@@ -25,10 +25,8 @@ Dann im Browser öffnen: **http://localhost:8080/test/**
 
 ## Inhalt
 
-- **Karte**: Zeigt die Raumplan-Karte mit Platzhalter-Bild und Mock-Entitäten
-- **Editor**: Konfigurations-Dialog mit Drag & Drop zum Positionieren
-- **Bild-URL**: Platzhalterbild (placehold.co) – kann auf lokale URL geändert werden
-- **Licht simulieren**: Schaltet `light.wohnzimmer` zwischen an/aus
+- **Karte**: Zeigt die Alfen-Wallbox-Karte mit Mock-Entitäten (Leistung, Status, etc.)
+- **Steuerung**: Buttons zum Simulieren von Laden an/aus, verriegelt/entriegelt
 
 ## Hinweis
 

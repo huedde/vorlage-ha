@@ -1,6 +1,6 @@
-# Interaktiver Raumplan
+# Alfen Wallbox Karte
 
-Lovelace-Karte für einen interaktiven Raumplan: Bild als Grundriss, Entitäten per Drag & Drop positionieren.
+Lovelace-Karte zur Visualisierung und Steuerung einer oder mehrerer Alfen-Wallboxen in Home Assistant.
 
 ## Installation (HACS)
 
@@ -8,10 +8,9 @@ Dieses Repository als Custom Repository in HACS unter **Frontend** hinzufügen, 
 
 ## Nutzung
 
-1. Bild des Raumplans unter `config/www/` ablegen (z. B. `grundriss.png`).
-2. Karte „Interaktiver Raumplan“ zum Dashboard hinzufügen.
-3. Bild-URL eintragen (z. B. `/local/grundriss.png`).
-4. Entitäten hinzufügen und in der Vorschau per Drag & Drop auf die richtigen Stellen ziehen.
-5. Speichern.
+1. Entitäten der Alfen-Wallbox (z. B. Leistung, Energie, Status, Lock, Switch) in Home Assistant bereitstellen.
+2. Karte „Alfen Wallbox Karte“ zum Dashboard hinzufügen.
+3. Entitäten in der Kartenkonfiguration eintragen (siehe `README.md`).
+4. Speichern.
 
 Details siehe [README.md](README.md).

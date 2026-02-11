@@ -1,7 +1,7 @@
 {
-  "name": "Interaktiver Raumplan",
+  "name": "Alfen Wallbox Karte",
   "version": "1.0.0",
-  "description": "Lovelace-Karte für einen interaktiven Raumplan mit Bild-Hintergrund und per Drag & Drop positionierbaren Entitäten.",
+  "description": "Lovelace-Karte für die Visualisierung und Steuerung einer oder mehrerer Alfen-Wallboxen in Home Assistant.",
   "type": "module",
   "author": "Home Assistant User"
 }

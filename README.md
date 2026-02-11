@@ -1,101 +1,65 @@
-# Interaktiver Raumplan
+# Alfen Wallbox Karte
 
-Lovelace-Karte für einen **Raumplan als Bild** mit per **Koordinaten (x, y)** positionierten Entitäten. Entitäten werden als **Kreise mit Icons** dargestellt und können per **Drag & Drop** im Editor platziert werden.
+Lovelace-Karte für eine oder mehrere **Alfen-Wallboxen**. Die Karte zeigt kompakt **Status, aktuelle Ladeleistung, Energie der Session, Stromstärke, Stecker-/Ladezustand** und erlaubt optional **Start/Stopp des Ladevorgangs** sowie **Verriegeln/Entriegeln** direkt aus dem Dashboard.
 
 ## Installation
 
 ### Über HACS
 
-1. HACS → **Frontend** → **Custom repositories** → `https://github.com/MarvinSMX/homeassistant-raumplan`
-2. Karte „Interaktiver Raumplan“ installieren
+1. HACS → **Frontend** → **Custom repositories** → dein GitHub-Repository dieser Karte
+2. Karte „Alfen Wallbox Karte“ installieren
 
 ### Manuell
 
-1. `dist/homeassistant-raumplan.js` nach `config/www/` kopieren
-2. Dashboard-Ressource: URL `/local/homeassistant-raumplan.js`, Typ **JavaScript-Modul**
+1. `dist/alfen-wallbox-card.js` nach `config/www/` kopieren
+2. Dashboard-Ressource: URL `/local/alfen-wallbox-card.js`, Typ **JavaScript-Modul**
 
 ## Konfiguration
 
 ### YAML
 
 ```yaml
-type: custom:room-plan-card
-image: /local/raumplan.png
-rotation: 0
-entities:
-  - entity: light.wohnzimmer
-    x: 25
-    y: 30
-    scale: 1
-    color: "#ffc107"
-  - entity: sensor.temperatur_bad
-    x: 75
-    y: 40
-    scale: 1.2
-  - entity: light.kueche
-    x: 50
-    y: 70
-    icon: mdi:ceiling-light
-    scale: 0.8
-    color: "#4caf50"
-walls:
-  - x1: 10
-    y1: 20
-    x2: 90
-    y2: 25
-    thickness: 2
-    height: 8
-  - x1: 50
-    y1: 30
-    x2: 55
-    y2: 80
-    thickness: 3
-    color: "#8d6e63"
+type: custom:alfen-wallbox-card
+title: Wallbox Garage
+status_entity: sensor.alfen_status              # optional, z.B. „Charging“, „Ready“, …
+power_entity: sensor.alfen_power                # aktuelle Leistung (kW)
+energy_entity: sensor.alfen_session_energy      # Energie der aktuellen Session (kWh)
+current_entity: sensor.alfen_current            # Stromstärke (A)
+plugged_entity: binary_sensor.alfen_plugged     # Kabel gesteckt ja/nein
+charging_entity: binary_sensor.alfen_charging   # lädt ja/nein
+lock_entity: lock.alfen_connector_lock          # Verriegelung des Steckers
+switch_entity: switch.alfen_charging_enable     # Laden erlauben/sperren
+
+# optional: Farben
+charging_color: '#00b894'
+idle_color: '#636e72'
+error_color: '#d63031'
 ```
 
 ### Parameter
 
-| Parameter    | Beschreibung                                           |
-|-------------|--------------------------------------------------------|
-| `image`     | URL des Raumplan-Bildes (PNG, JPG, SVG)               |
-| `rotation`  | Optional: Drehung des Bildes in Grad (0, 90, 180, 270)|
-| `entities`  | Liste mit `entity`, `x`, `y` (Prozent 0–100)           |
-| `icon`      | Optional: MDI-Icon (z.B. `mdi:ceiling-light`)         |
-| `scale`     | Optional: Skalierung pro Entität (0.3–2, Standard: 1)|
-| `color`     | Optional: Farbe pro Entität (Hex, z.B. `#ffc107`)    |
-| `walls`     | Optional: Top-Down-Wände (x1,y1,x2,y2, thickness, height) |
-| `title`     | Optional: Überschrift über der Karte                  |
-
-### Wände (Top-Down)
-
-Wände werden als 2D-Rechtecke von oben dargestellt. Im Editor: **„Wand einzeichnen“** klicken, dann **Startpunkt** und **Endpunkt** auf dem Plan setzen. In der Position-Ansicht: **Wandfläche verschieben** oder **blaue Endpunkte ziehen** zum Verlängern. Pro Wand: `x1,y1` (Start), `x2,y2` (Ende), `thickness` (Dicke, Standard: 2), optional `height` und `color`.
+| Parameter         | Beschreibung                                                                 |
+|------------------|------------------------------------------------------------------------------|
+| `title`          | Überschrift über der Karte                                                   |
+| `status_entity`  | (Optional) Sensor mit textlichem Status der Wallbox                         |
+| `power_entity`   | Sensor mit aktueller Ladeleistung in kW                                      |
+| `energy_entity`  | Sensor mit Energie der aktuellen Session in kWh                              |
+| `current_entity` | (Optional) Sensor mit aktueller Stromstärke in A                             |
+| `plugged_entity` | (Optional) Binary-Sensor, ob Fahrzeug/Stecker angesteckt ist (`on`/`off`)    |
+| `charging_entity`| (Optional) Binary-Sensor, ob gerade geladen wird (`on`/`off`)                |
+| `lock_entity`    | (Optional) `lock`-Entity für die Verriegelung des Steckers                   |
+| `switch_entity`  | (Optional) `switch`-Entity, um Laden zu erlauben/zu sperren                  |
+| `charging_color` | Farbe der Statusanzeige, wenn geladen wird (Standard: `var(--primary-color)`|
+| `idle_color`     | Farbe der Statusanzeige im Leerlauf                                          |
+| `error_color`    | Farbe der Statusanzeige bei Fehler                                           |
 
 ### Anzeige in Home Assistant
 
-Die Karte skaliert **responsive** zur konfigurierten Card-Größe im Dashboard. Bild, Wände und Entitäten passen sich automatisch an. Die Karte enthält Anpassungen für HA (kein Padding, Theme-Variablen). Wenn Layout-Probleme auftreten, kannst du mit **card-mod** nachhelfen:
-
-```yaml
-type: custom:room-plan-card
-# ... deine config ...
-card_mod:
-  style: |
-    ha-card { padding: 0 !important; }
-```
-
-## Koordinaten
-
-- **x** und **y** sind Prozentwerte (0–100) relativ zur Bildbreite und -höhe
-- **x: 0** = links, **x: 100** = rechts
-- **y: 0** = oben, **y: 100** = unten
-- Im Konfigurations-Editor: Kreise per **Drag & Drop** auf dem Vorschau-Bild verschieben
-
-## Nutzung
-
-1. Bild des Raumplans unter `config/www/` ablegen (z.B. `raumplan.png`)
-2. Karte „Interaktiver Raumplan“ zum Dashboard hinzufügen
-3. Bild-URL eintragen (z.B. `/local/raumplan.png`)
-4. Entitäten hinzufügen und in der Vorschau per Drag & Drop auf die richtigen Stellen ziehen
-5. Speichern – Klick auf einen Kreis öffnet die Entity-Details
+- Großer Kreis mit **aktueller Leistung (kW)**.
+- Status-Chip mit Text (z.B. „Lädt“, „Bereit“, „Fehler“) und farblicher Hervorhebung.
+- Detailzeilen für **Session-Energie, Stromstärke, Lock/Freigabe**.
+- Kleine Chips für „Stecker angesteckt“ und „Ladevorgang aktiv“ (falls konfiguriert).
+- Buttons zum **Starten/Stoppen** des Ladevorgangs (`switch_entity`) und zum **Verriegeln/Entriegeln** (`lock_entity`), sofern die Entitäten gesetzt sind.
 
 ## Lokale Test-UI
 

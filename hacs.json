@@ -1,5 +1,5 @@
 {
-  "name": "Interaktiver Raumplan",
+  "name": "Alfen Wallbox Karte",
   "render_readme": true,
-  "filename": "homeassistant-raumplan.js"
+  "filename": "alfen-wallbox-card.js"
 }

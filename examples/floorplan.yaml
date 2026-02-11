@@ -1,18 +1,14 @@
-# Beispiel-Konfiguration für die Raumplan-Karte
-# Kopiere diese Rules in deine Karte und passe die Entity-IDs an!
-type: custom:room-plan-card
-image: /local/floorplan.svg
-stylesheet: /local/floorplan.css
-rules:
-  - entity: light.wohnzimmer
-    element: area.wohnzimmer
-    tap_action: toggle
-  - entity: light.kueche
-    element: area.kueche
-    tap_action: toggle
-  - entity: light.bad
-    element: area.bad
-    tap_action: toggle
-  - entity: light.schlafzimmer
-    element: area.schlafzimmer
-    tap_action: toggle
+# Beispiel-Konfiguration für die Alfen-Wallbox-Karte
+# Kopiere diese Konfiguration in dein Dashboard und passe die Entity-IDs an!
+
+type: custom:alfen-wallbox-card
+title: Wallbox Garage
+status_entity: sensor.alfen_status
+power_entity: sensor.alfen_power
+energy_entity: sensor.alfen_session_energy
+current_entity: sensor.alfen_current
+plugged_entity: binary_sensor.alfen_plugged
+charging_entity: binary_sensor.alfen_charging
+lock_entity: lock.alfen_connector_lock
+switch_entity: switch.alfen_charging_enable
+

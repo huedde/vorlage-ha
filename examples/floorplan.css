@@ -1,14 +1,3 @@
-/* Beispiel-CSS für den Raumplan */
-/* Lampen: Ein = hell, Aus = dunkel */
-.ha-entity.state-on { opacity: 1 !important; }
-.ha-entity.state-off { opacity: 0.5 !important; }
-
-/* Spezifisch pro Raum */
-.ha-entity-light-wohnzimmer.state-on { fill: #fff59d !important; }
-.ha-entity-light-wohnzimmer.state-off { fill: #b3e5fc !important; }
-
-.ha-entity-light-kueche.state-on { fill: #a5d6a7 !important; }
-.ha-entity-light-kueche.state-off { fill: #c8e6c9 !important; }
-
-/* Hover-Effekt */
-.ha-entity:hover { stroke: #03A9F4 !important; stroke-width: 2px !important; cursor: pointer; }
+/* Platzhalter – für die Alfen-Wallbox-Karte wird kein spezielles CSS benötigt.
+ * Anpassungen können über Home Assistant Themes oder card-mod erfolgen.
+ */

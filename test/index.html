@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raumplan Karte – Lokaler Test</title>
+  <title>Alfen Wallbox Karte – Lokaler Test</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -37,62 +37,50 @@
   </style>
 </head>
 <body>
-  <h1>Interaktiver Raumplan – Lokaler Test</h1>
+  <h1>Alfen Wallbox Karte – Lokaler Test</h1>
 
   <div class="test-section">
     <h2>Karte (Anzeige)</h2>
     <div class="controls">
-      <label>Bild-URL:</label>
-      <input type="text" id="img-url" value="test/Dieselstrasse2.svg" placeholder="/local/raumplan.png">
-      <label>Drehung:</label>
-      <select id="img-rotation">
-        <option value="0">0°</option>
-        <option value="90">90°</option>
-        <option value="180">180°</option>
-        <option value="270">270°</option>
-      </select>
-      <button id="btn-apply">Anwenden</button>
-      <button id="btn-toggle" class="secondary">Licht simulieren (an/aus)</button>
+      <button id="btn-toggle-charging">Laden an/aus</button>
+      <button id="btn-toggle-lock" class="secondary">Verriegeln/Entriegeln</button>
+      <button id="btn-toggle-plugged" class="secondary">Stecker an/ab</button>
     </div>
     <div class="card-wrap">
       <div id="card-container"></div>
     </div>
   </div>
 
-  <div class="test-section">
-    <h2>Konfigurations-Editor</h2>
-    <div class="card-wrap">
-      <div id="editor-container"></div>
-    </div>
-  </div>
-
   <!-- Mock HA Komponenten -->
   <script src="mock-ha.js"></script>
 
-  <!-- Raumplan Karte -->
-  <script src="../dist/homeassistant-raumplan.js"></script>
+  <!-- Alfen Wallbox Karte -->
+  <script src="../dist/alfen-wallbox-card.js"></script>
 
   <script>
     const mockHass = {
       states: {
-        'light.wohnzimmer': { state: 'on', attributes: { friendly_name: 'Wohnzimmer', icon: 'mdi:sofa' } },
-        'light.kueche': { state: 'off', attributes: { friendly_name: 'Küche', icon: 'mdi:lightbulb' } },
-        'sensor.temperatur_bad': { state: '22.5', attributes: { friendly_name: 'Bad Temperatur', unit_of_measurement: '°C' } },
-        'light.bad': { state: 'off', attributes: { friendly_name: 'Bad' } },
-        'light.schlafzimmer': { state: 'on', attributes: { friendly_name: 'Schlafzimmer' } }
+        'sensor.alfen_power': { state: '7.4', attributes: { friendly_name: 'Alfen Leistung', unit_of_measurement: 'kW' } },
+        'sensor.alfen_session_energy': { state: '3.2', attributes: { friendly_name: 'Alfen Session Energie', unit_of_measurement: 'kWh' } },
+        'sensor.alfen_current': { state: '16', attributes: { friendly_name: 'Alfen Strom', unit_of_measurement: 'A' } },
+        'binary_sensor.alfen_plugged': { state: 'on', attributes: { friendly_name: 'Stecker angesteckt' } },
+        'binary_sensor.alfen_charging': { state: 'on', attributes: { friendly_name: 'Ladevorgang aktiv' } },
+        'lock.alfen_connector_lock': { state: 'locked', attributes: { friendly_name: 'Steckerverriegelung' } },
+        'switch.alfen_charging_enable': { state: 'on', attributes: { friendly_name: 'Laden erlauben' } },
+        'sensor.alfen_status': { state: 'Charging', attributes: { friendly_name: 'Status' } }
       }
     };
 
     const defaultConfig = {
-      image: 'test/Dieselstrasse2.svg',
-      title: 'EG',
-      rotation: 0,
-      entities: [
-        { entity: 'light.wohnzimmer', x: 25, y: 30, scale: 1, color: '#ffc107' },
-        { entity: 'light.kueche', x: 75, y: 30, scale: 1.2 },
-        { entity: 'sensor.temperatur_bad', x: 50, y: 70, scale: 0.8 }
-      ],
-      walls: []
+      title: 'Alfen Wallbox Demo',
+      status_entity: 'sensor.alfen_status',
+      power_entity: 'sensor.alfen_power',
+      energy_entity: 'sensor.alfen_session_energy',
+      current_entity: 'sensor.alfen_current',
+      plugged_entity: 'binary_sensor.alfen_plugged',
+      charging_entity: 'binary_sensor.alfen_charging',
+      lock_entity: 'lock.alfen_connector_lock',
+      switch_entity: 'switch.alfen_charging_enable'
     };
 
     // Karte
@@ -101,51 +89,34 @@
 
     function renderCard(config) {
       if (!cardEl) {
-        cardEl = document.createElement('room-plan-card');
+        cardEl = document.createElement('alfen-wallbox-card');
         cardContainer.appendChild(cardEl);
       }
       cardEl.setConfig(config);
       cardEl.hass = mockHass;
     }
 
-    document.getElementById('btn-apply').addEventListener('click', () => {
-      const url = document.getElementById('img-url').value.trim();
-      const rotation = Number(document.getElementById('img-rotation').value) || 0;
-      renderCard({ ...defaultConfig, image: url || defaultConfig.image, rotation });
-    });
-
-    document.getElementById('btn-toggle').addEventListener('click', () => {
-      const s = mockHass.states['light.wohnzimmer'];
+    document.getElementById('btn-toggle-charging').addEventListener('click', () => {
+      const s = mockHass.states['switch.alfen_charging_enable'];
       s.state = s.state === 'on' ? 'off' : 'on';
       if (cardEl) cardEl.hass = mockHass;
     });
 
-    // Editor
-    const editorContainer = document.getElementById('editor-container');
-    let editorEl = null;
+    document.getElementById('btn-toggle-lock').addEventListener('click', () => {
+      const s = mockHass.states['lock.alfen_connector_lock'];
+      s.state = s.state === 'locked' ? 'unlocked' : 'locked';
+      if (cardEl) cardEl.hass = mockHass;
+    });
 
-    function renderEditor() {
-      if (!editorEl) {
-        editorEl = document.createElement('room-plan-editor');
-        editorContainer.appendChild(editorEl);
-      }
-      editorEl.setConfig(defaultConfig);
-      editorEl.hass = mockHass;
-      editorEl.addEventListener('config-changed', (e) => {
-        console.log('Config geändert:', e.detail.config);
-        const c = e.detail.config;
-        defaultConfig.image = c.image || defaultConfig.image;
-        defaultConfig.rotation = c.rotation ?? defaultConfig.rotation;
-        defaultConfig.entities = c.entities || defaultConfig.entities;
-        defaultConfig.walls = c.walls || defaultConfig.walls || [];
-        renderCard(c);
-      });
-    }
+    document.getElementById('btn-toggle-plugged').addEventListener('click', () => {
+      const s = mockHass.states['binary_sensor.alfen_plugged'];
+      s.state = s.state === 'on' ? 'off' : 'on';
+      if (cardEl) cardEl.hass = mockHass;
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         renderCard(defaultConfig);
-        renderEditor();
       }, 100);
     });
   </script>
